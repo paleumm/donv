@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>DoNV</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: sans-serif;
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .version-boxes {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 1rem;
+        }
+
+        .box {
+            background-color: #1e1e1e;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            width: 30%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background-color: #1f1f1f;
+        }
+
+        tbody tr:hover {
+            background-color: #2a2a2a;
+        }
+
+        #status {
+            text-align: center;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            color: #888;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Right-align numeric metric columns */
+        td:nth-child(3),
+        td:nth-child(4),
+        td:nth-child(5),
+        td:nth-child(6),
+        th:nth-child(3),
+        th:nth-child(4),
+        th:nth-child(5),
+        th:nth-child(6) {
+            text-align: right;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>DoNV</h1>
+
+    <div class="version-boxes">
+        <div class="box" id="cuda">CUDA: -</div>
+        <div class="box" id="driver">Driver: -</div>
+        <div class="box" id="nvml">NVML: -</div>
+    </div>
+
+    <table id="gpuTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Memory Usage</th>
+                <th>GPU Utilization</th>
+                <th>Memory Controller Util</th>
+                <th>Power Usage</th>
+            </tr>
+        </thead>
+        <tbody id="gpuBody">
+            <!-- Filled by JS -->
+        </tbody>
+    </table>
+
+    <div id="status">Connecting...</div>
+
+    <!-- Toggle Button -->
+    <div class="mt-6">
+        <button onclick="toggleDescriptions(event)"
+            class="text-sm text-gray-300 hover:text-white underline focus:outline-none">
+            Show Metric Descriptions
+        </button>
+    </div>
+
+    <!-- Descriptions Section -->
+    <div id="descriptionBox" class="hidden mt-2 p-4 bg-gray-900 rounded-xl shadow text-gray-300 text-xs leading-snug">
+        <ul class="list-disc list-inside space-y-1">
+            <li><span class="text-white font-medium">ID:</span> GPU index in the system (0-based).</li>
+            <li><span class="text-white font-medium">Name:</span> GPU model identifier.</li>
+            <li><span class="text-white font-medium">Memory Usage:</span> Current / total VRAM in MiB.</li>
+            <li><span class="text-white font-medium">Memory Controller Util:</span> Memory bandwidth usage (Mem
+                Controller).
+            </li>
+            <li><span class="text-white font-medium">GPU Utilization:</span> GPU core load.</li>
+            <li><span class="text-white font-medium">Power Usage:</span> Real-time power draw (Watts).</li>
+        </ul>
+    </div>
+
+
+    <script>
+        const socket = new WebSocket(`ws://${location.host}/ws`);
+        const gpuBody = document.getElementById("gpuBody");
+        const status = document.getElementById("status");
+
+        function toggleDescriptions(event) {
+            const box = document.getElementById("descriptionBox");
+            const isHidden = box.classList.contains("hidden");
+            box.classList.toggle("hidden");
+            event.target.textContent = isHidden
+                ? "Hide Metric Descriptions"
+                : "Show Metric Descriptions";
+        }
+
+        socket.onopen = () => {
+            status.textContent = "Connected";
+        };
+
+        socket.onclose = () => {
+            status.textContent = "Disconnected";
+        };
+
+        socket.onerror = (err) => {
+            status.textContent = "WebSocket error";
+            console.error("WebSocket error:", err);
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // Update top version info (just use first GPU for these)
+            const first = data[0];
+            const major = Math.floor(first.cuda_version / 1000);       // e.g., 12
+            const minor = Math.floor((first.cuda_version % 1000) / 10); // e.g., 40 → 4
+            document.getElementById("cuda").textContent = `CUDA: ${major}.${minor}`;
+            document.getElementById("cuda").textContent = `CUDA: ${major}.${minor}`;
+            document.getElementById("driver").textContent = `Driver: ${first.driver_version}`;
+            document.getElementById("nvml").textContent = `NVML: ${first.nvml_version}`;
+
+            // Update table
+            gpuBody.innerHTML = "";
+            for (const gpu of data) {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+          <td>${gpu.id}</td>
+          <td>${gpu.name}</td>
+          <td>${gpu.memory_used_mib} / ${gpu.memory_total_mib} MiB</td>
+          <td>${gpu.memory_util}%</td>
+          <td>${gpu.utilization_gpu}%</td>
+          <td>${gpu.power_usage} W</td>
+        `;
+                gpuBody.appendChild(row);
+            }
+        };
+    </script>
+</body>
+
+</html>
