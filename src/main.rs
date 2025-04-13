@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use tokio::time::{interval, Duration};
 use tower_http::services::ServeDir;
+use tracing::info;
 
 static NVML_INSTANCE: Lazy<Nvml> = Lazy::new(|| Nvml::init().expect("Failed to initialize NVML"));
 
@@ -149,6 +150,7 @@ async fn main() {
         .await
         .unwrap();
 
+    info!("DoNV server started at http://0.0.0.0:26501");
     axum::serve(listener, app).await.unwrap();
 }
 
