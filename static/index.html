@@ -89,14 +89,15 @@
         <div class="box" id="nvml">NVML: -</div>
     </div>
 
+
     <table id="gpuTable">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Memory Usage</th>
+                <th>Mem Usage</th>
+                <th>Mem Ctrl Util</th>
                 <th>GPU Utilization</th>
-                <th>Memory Controller Util</th>
                 <th>Power Usage</th>
             </tr>
         </thead>
@@ -169,9 +170,19 @@
             document.getElementById("driver").textContent = `Driver: ${first.driver_version}`;
             document.getElementById("nvml").textContent = `NVML: ${first.nvml_version}`;
 
+            // let totalPower = 0;
+            // for (const gpu of data) {
+            //     totalPower += gpu.power_usage;
+            // }
+            // document.getElementById("totalPower").textContent = `Total Power: ${totalPower} W`;
+
             // Update table
             gpuBody.innerHTML = "";
+            let totalPower = 0;
+
             for (const gpu of data) {
+                totalPower += gpu.power_usage;
+
                 const row = document.createElement("tr");
                 row.innerHTML = `
           <td>${gpu.id}</td>
@@ -183,6 +194,12 @@
         `;
                 gpuBody.appendChild(row);
             }
+            const totalRow = document.createElement("tr");
+            totalRow.innerHTML = `
+  <td colspan="5" style="text-align: right; font-weight: bold;">Total Power Usage:</td>
+  <td style="text-align: right; font-weight: bold;">${totalPower} W</td>
+`;
+            gpuBody.appendChild(totalRow);
         };
     </script>
 </body>
